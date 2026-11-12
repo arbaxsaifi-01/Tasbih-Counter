@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ur-Latn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tasbih Counter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e7ece6; --ink:#1d2b26; --muted:#5d6c65; --track:#cbd6ce; --accent:#1f5c4a; --bead:#b98a4e; --chip:#dbe4dd; --on-accent:#f3f7f4;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#13201b;--ink:#e6efe9;--muted:#93a59b;--track:#2a3b34;--accent:#6fc2a2;--bead:#d4a56a;--chip:#1f302a;--on-accent:#10201a;color-scheme:dark}
+}
+:root[data-theme="dark"]{--bg:#13201b;--ink:#e6efe9;--muted:#93a59b;--track:#2a3b34;--accent:#6fc2a2;--bead:#d4a56a;--chip:#1f302a;--on-accent:#10201a;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;display:flex;flex-direction:column;align-items:center;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+main{width:100%;max-width:440px;flex:1;display:flex;flex-direction:column;align-items:center;padding:20px 20px 24px;gap:18px}
+.arabic{font-family:Amiri,"Noto Naskh Arabic","Traditional Arabic",serif;font-size:2.6rem;line-height:1.5;text-align:center;margin:4px 0 0;min-height:4rem}
+.meaning{margin:-12px 0 0;color:var(--muted);font-size:.95rem;text-align:center}
+.row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.chip{font:inherit;font-size:.9rem;font-weight:500;color:var(--ink);background:var(--chip);border:0;border-radius:999px;padding:8px 14px;cursor:pointer;min-height:40px}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.chip:focus-visible,.bead:focus-visible,.act:focus-visible{outline:3px solid var(--bead);outline-offset:3px}
+.dial{position:relative;width:min(78vw,320px);aspect-ratio:1;margin:6px 0}
+.dial svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg);pointer-events:none}
+.track{fill:none;stroke:var(--track);stroke-width:10}
+.prog{fill:none;stroke:var(--accent);stroke-width:10;stroke-linecap:round;transition:stroke-dashoffset .18s ease}
+.bead{position:absolute;inset:22px;border-radius:50%;border:0;cursor:pointer;color:var(--on-accent);
+  background:radial-gradient(circle at 34% 28%,color-mix(in srgb,var(--bead) 70%,white),var(--bead) 55%,color-mix(in srgb,var(--bead) 70%,black));
+  box-shadow:0 10px 24px rgba(0,0,0,.22),inset 0 -6px 14px rgba(0,0,0,.18);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;transition:transform .08s ease,box-shadow .08s ease}
+.bead:active,.bead.hit{transform:scale(.965);box-shadow:0 4px 12px rgba(0,0,0,.25),inset 0 -4px 10px rgba(0,0,0,.2)}
+.num{font-size:4.6rem;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;color:#fffaf0;text-shadow:0 2px 6px rgba(0,0,0,.3)}
+.of{margin-top:6px;font-size:.95rem;color:#fff3dc;opacity:.9}
+.stats{display:flex;gap:28px;justify-content:center}
+.stat{text-align:center}
+.stat b{display:block;font-size:1.5rem;font-weight:600;font-variant-numeric:tabular-nums}
+.stat span{color:var(--muted);font-size:.85rem}
+.acts{display:flex;gap:10px;width:100%;margin-top:auto}
+.act{flex:1;font:inherit;font-weight:600;font-size:1rem;border-radius:14px;border:2px solid var(--accent);background:transparent;color:var(--accent);padding:13px;cursor:pointer;min-height:48px}
+.act.fill{background:var(--accent);color:var(--on-accent)}
+.toast{min-height:1.2rem;color:var(--accent);font-weight:600;font-size:.95rem;text-align:center}
+@media (prefers-reduced-motion:reduce){.prog,.bead{transition:none}}
+</style>
+</head>
+<body>
+<main>
+  <div class="arabic" id="ar" lang="ar" dir="rtl"></div>
+  <p class="meaning" id="mean"></p>
+  <div class="row" id="dhikrs" role="group" aria-label="Zikr chunein"></div>
+  <div class="row" id="targets" role="group" aria-label="Target chunein"></div>
+
+  <div class="dial">
+    <svg viewBox="0 0 200 200" aria-hidden="true">
+      <circle class="track" cx="100" cy="100" r="92"/>
+      <circle class="prog" id="prog" cx="100" cy="100" r="92" stroke-dasharray="578.05" stroke-dashoffset="578.05"/>
+    </svg>
+    <button class="bead" id="bead" aria-label="Tasbih dabayein">
+      <span class="num" id="count">0</span>
+      <span class="of" id="ofLabel">of 100</span>
+    </button>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><b id="total">0</b><span>Total</span></div>
+    <div class="stat"><b id="rounds">0</b><span>Rounds</span></div>
+    <div class="stat"><b id="left">100</b><span>Baaqi</span></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="acts">
+    <button class="act" id="resetBtn">Reset</button>
+    <button class="act fill" id="minusBtn">-1 Peechhe</button>
+  </div>
+  <p style="color:var(--muted);font-size:.85rem;text-align:center;margin:0">Ginti apne aap save ho jayegi</p>
+</main>
+
+<script>
+const DHIKRS = [
+  { name: 'SubhanAllah', ar: 'سُبْحَانَ اللَّهِ', mean: 'Allah paak hai' },
+  { name: 'Alhamdulillah', ar: 'الْحَمْدُ لِلَّهِ', mean: 'Saari taarif Allah ke liye' },
+  { name: 'Allahu Akbar', ar: 'اللَّهُ أَكْبَرُ', mean: 'Allah sabse bada hai' },
+  { name: 'Astaghfirullah', ar: 'أَسْتَغْفِرُ اللَّهَ', mean: 'Main Allah se maafi maangta hu' },
+  { name: 'La ilaha illallah', ar: 'لَا إِلَهَ إِلَّا اللَّهُ', mean: 'Allah ke siwa koi mabood nahi' },
+];
+const TARGETS = [33, 100, 500, 1000];
+
+// Save wali setting - localStorage
+let state = { dhikr: 0, target: 100, count: 0, total: 0, rounds: 0 };
+try {
+  const saved = JSON.parse(localStorage.getItem('tasbih-v1') || 'null');
+  if (saved) state = { ...state, ...saved };
+} catch(e) {}
+
+const arEl = document.getElementById('ar');
+const meanEl = document.getElementById('mean');
+const dhikrsEl = document.getElementById('dhikrs');
+const targetsEl = document.getElementById('targets');
+const countEl = document.getElementById('count');
+const ofEl = document.getElementById('ofLabel');
+const progEl = document.getElementById('prog');
+const totalEl = document.getElementById('total');
+const roundsEl = document.getElementById('rounds');
+const leftEl = document.getElementById('left');
+const toastEl = document.getElementById('toast');
+const beadEl = document.getElementById('bead');
+
+function save() {
+  try { localStorage.setItem('tasbih-v1', JSON.stringify(state)); } catch(e) {}
+}
+
+function vibrate() {
+  // Mobile par halki vibration
+  if (navigator.vibrate) navigator.vibrate(12);
+}
+
+function renderChips() {
+  dhikrsEl.innerHTML = '';
+  DHIKRS.forEach((d, i) => {
+    const b = document.createElement('button');
+    b.className = 'chip';
+    b.textContent = d.name;
+    b.setAttribute('aria-pressed', i === state.dhikr ? 'true' : 'false');
+    b.onclick = () => { state.dhikr = i; state.count = 0; save(); render(); };
+    dhikrsEl.appendChild(b);
+  });
+  targetsEl.innerHTML = '';
+  TARGETS.forEach(t => {
+    const b = document.createElement('button');
+    b.className = 'chip';
+    b.textContent = t;
+    b.setAttribute('aria-pressed', t === state.target ? 'true' : 'false');
+    b.onclick = () => { state.target = t; state.count = 0; save(); render(); };
+    targetsEl.appendChild(b);
+  });
+}
+
+function render() {
+  const d = DHIKRS[state.dhikr];
+  arEl.textContent = d.ar;
+  meanEl.textContent = d.mean;
+  countEl.textContent = state.count;
+  ofEl.textContent = 'of ' + state.target;
+  totalEl.textContent = state.total;
+  roundsEl.textContent = state.rounds;
+  leftEl.textContent = Math.max(0, state.target - state.count);
+  const pct = state.target ? state.count / state.target : 0;
+  progEl.style.strokeDashoffset = 578.05 * (1 - Math.min(1, pct));
+  renderChips();
+}
+
+function tap() {
+  vibrate();
+  beadEl.classList.add('hit');
+  setTimeout(() => beadEl.classList.remove('hit'), 100);
+  state.count++;
+  state.total++;
+  if (state.count >= state.target) {
+    state.rounds++;
+    state.count = 0;
+    toastEl.textContent = 'MashaAllah! ' + state.target + ' mukammal ho gaya';
+    if (navigator.vibrate) navigator.vibrate([40, 50, 40]);
+    setTimeout(() => toastEl.textContent = '', 2500);
+  } else {
+    toastEl.textContent = '';
+  }
+  save();
+  render();
+}
+
+beadEl.addEventListener('click', tap);
+// Space / Enter se bhi dab sake
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); tap(); }
+});
+
+document.getElementById('resetBtn').onclick = () => {
+  state.count = 0; state.total = 0; state.rounds = 0;
+  toastEl.textContent = 'Reset ho gaya';
+  save(); render();
+};
+document.getElementById('minusBtn').onclick = () => {
+  if (state.count > 0) { state.count--; state.total = Math.max(0, state.total - 1); }
+  save(); render();
+};
+
+render();
+</script>
+</body>
+</html>
